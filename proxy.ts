@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifyAdminSession } from "./app/lib/auth";
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname === "/admin/login") {
+    return NextResponse.next();
+  }
+
+  if (!pathname.startsWith("/admin")) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get("raqei_admin_session")?.value;
+
+  if (!token) {
+    return NextResponse.redirect(
+      new URL("/admin/login", request.url)
+    );
+  }
+
+  const session = await verifyAdminSession(token);
+
+  if (!session || session.role !== "ADMIN") {
+    const response = NextResponse.redirect(
+      new URL("/admin/login", request.url)
+    );
+
+    response.cookies.delete("raqei_admin_session");
+
+    return response;
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/admin/:path*"],
+};
