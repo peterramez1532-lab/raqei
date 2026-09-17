@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 
 export default function AdminSettingsPage() {
@@ -50,6 +49,10 @@ export default function AdminSettingsPage() {
         setSettings((current) => ({
           ...current,
           ...data,
+          freeShipping:
+            data.freeShipping !== undefined
+              ? String(data.freeShipping)
+              : current.freeShipping,
         }));
       })
       .catch((error) => {
@@ -206,33 +209,64 @@ const saveShippingRates = async () => {
     setShippingSaving(false);
   }
 };
+
   const handleSave = async(
   event:React.FormEvent<HTMLFormElement>
   )=>{
 
   event.preventDefault();
 
+  try {
 
-  await fetch("/api/admin/settings",{
+    const payload = {
+      ...settings,
+      freeShipping: String(settings.freeShipping).trim(),
+    };
 
-  method:"PUT",
+    console.log("SAVING SETTINGS:", payload);
 
-  headers:{
-  "Content-Type":"application/json"
-  },
+    const response = await fetch("/api/admin/settings",{
 
-  body:JSON.stringify(settings)
+    method:"PUT",
 
-  });
+    headers:{
+    "Content-Type":"application/json"
+    },
 
+    body:JSON.stringify(payload)
 
-  setSaved(true);
+    });
 
+    const data = await response.json();
 
-  setTimeout(()=>{
-  setSaved(false);
-  },3000);
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Failed to save settings."
+      );
+    }
 
+    if (data.settings) {
+      setSettings((current) => ({
+        ...current,
+        ...data.settings,
+        freeShipping:
+          data.settings.freeShipping !== undefined
+            ? String(data.settings.freeShipping)
+            : current.freeShipping,
+      }));
+    }
+
+    setSaved(true);
+
+    setTimeout(()=>{
+    setSaved(false);
+    },3000);
+
+  } catch (error) {
+
+    console.error("SAVE SETTINGS ERROR:", error);
+
+  }
 
   };
 
@@ -676,7 +710,18 @@ const saveShippingRates = async () => {
 
                     type="number"
 
-                    defaultValue="1000"
+                    min="0"
+
+                    step="1"
+
+                    value={settings.freeShipping}
+
+                    onChange={(e) =>
+                      setSettings((current) => ({
+                        ...current,
+                        freeShipping: e.target.value,
+                      }))
+                    }
 
                     className="w-full border border-black/10 bg-[#F8F7F4] px-4 py-4 pr-16 text-sm outline-none transition focus:border-black"
 

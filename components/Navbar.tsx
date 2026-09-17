@@ -14,11 +14,14 @@ import {
 } from "lucide-react";
 
 import { useCart } from "@/components/Providers/CartProvider";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function Navbar() {
   const [storeName, setStoreName] = useState("RAQEI");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const { language, toggleLanguage } = useLanguage();
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -66,6 +69,8 @@ export default function Navbar() {
     ? `https://api.whatsapp.com/send/?phone=${cleanWhatsAppNumber}`
     : "#";
 
+  const isArabic = language === "ar";
+
   return (
     <>
       {/* NAVBAR */}
@@ -85,38 +90,48 @@ export default function Navbar() {
               href="/"
               className="text-sm transition hover:opacity-60"
             >
-              Home
+              {isArabic ? "الرئيسية" : "Home"}
             </Link>
 
             <Link
               href="/shop"
               className="text-sm transition hover:opacity-60"
             >
-              Shop
+              {isArabic ? "المتجر" : "Shop"}
             </Link>
 
             <Link
               href="/collections"
               className="text-sm transition hover:opacity-60"
             >
-              Collections
+              {isArabic ? "المجموعات" : "Collections"}
             </Link>
 
             <Link
               href="/about"
               className="text-sm transition hover:opacity-60"
             >
-              About
+              {isArabic ? "من نحن" : "About"}
             </Link>
           </nav>
 
           {/* ACTIONS */}
           <div className="flex items-center gap-4">
+            {/* LANGUAGE */}
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              className="text-xs font-medium tracking-wide transition hover:opacity-60"
+              aria-label="Change language"
+            >
+              {isArabic ? "EN" : "AR"}
+            </button>
+
             {/* SEARCH */}
             <button
               type="button"
               className="hidden transition hover:opacity-60 sm:block"
-              aria-label="Search"
+              aria-label={isArabic ? "بحث" : "Search"}
             >
               <Search size={19} strokeWidth={1.7} />
             </button>
@@ -125,7 +140,7 @@ export default function Navbar() {
             <Link
               href="/login"
               className="hidden transition hover:opacity-60 sm:block"
-              aria-label="Account"
+              aria-label={isArabic ? "الحساب" : "Account"}
             >
               <User size={19} strokeWidth={1.7} />
             </Link>
@@ -135,7 +150,7 @@ export default function Navbar() {
               type="button"
               onClick={() => openCart()}
               className="relative transition hover:opacity-60"
-              aria-label="Shopping cart"
+              aria-label={isArabic ? "سلة المشتريات" : "Shopping cart"}
             >
               <ShoppingBag size={20} strokeWidth={1.7} />
 
@@ -151,7 +166,7 @@ export default function Navbar() {
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden"
-              aria-label="Menu"
+              aria-label={isArabic ? "القائمة" : "Menu"}
             >
               {menuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -167,7 +182,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="text-sm"
               >
-                Home
+                {isArabic ? "الرئيسية" : "Home"}
               </Link>
 
               <Link
@@ -175,7 +190,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="text-sm"
               >
-                Shop
+                {isArabic ? "المتجر" : "Shop"}
               </Link>
 
               <Link
@@ -183,7 +198,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="text-sm"
               >
-                Collections
+                {isArabic ? "المجموعات" : "Collections"}
               </Link>
 
               <Link
@@ -191,7 +206,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="text-sm"
               >
-                About
+                {isArabic ? "من نحن" : "About"}
               </Link>
 
               <Link
@@ -199,7 +214,7 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(false)}
                 className="text-sm"
               >
-                Account
+                {isArabic ? "الحساب" : "Account"}
               </Link>
             </nav>
           </div>
@@ -220,10 +235,19 @@ export default function Navbar() {
             {/* DRAWER HEADER */}
             <div className="flex items-center justify-between border-b border-black/10 px-6 py-5">
               <div>
-                <h2 className="text-lg font-semibold">Your Cart</h2>
+                <h2 className="text-lg font-semibold">
+                  {isArabic ? "سلة المشتريات" : "Your Cart"}
+                </h2>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  {totalItems} {totalItems === 1 ? "item" : "items"}
+                  {totalItems}{" "}
+                  {isArabic
+                    ? totalItems === 1
+                      ? "منتج"
+                      : "منتجات"
+                    : totalItems === 1
+                      ? "item"
+                      : "items"}
                 </p>
               </div>
 
@@ -231,7 +255,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => closeCart()}
                 className="flex h-9 w-9 items-center justify-center transition hover:bg-black/5"
-                aria-label="Close cart"
+                aria-label={isArabic ? "إغلاق" : "Close cart"}
               >
                 <X size={20} />
               </button>
@@ -248,11 +272,15 @@ export default function Navbar() {
                   />
 
                   <h3 className="mt-5 text-lg font-medium">
-                    Your cart is empty
+                    {isArabic
+                      ? "سلة المشتريات فارغة"
+                      : "Your cart is empty"}
                   </h3>
 
                   <p className="mt-2 text-sm text-gray-500">
-                    Add something you love.
+                    {isArabic
+                      ? "أضف المنتجات التي تحبها."
+                      : "Add something you love."}
                   </p>
 
                   <Link
@@ -260,7 +288,7 @@ export default function Navbar() {
                     onClick={() => closeCart()}
                     className="mt-6 bg-black px-7 py-3 text-sm text-white"
                   >
-                    Shop Now
+                    {isArabic ? "تسوق الآن" : "Shop Now"}
                   </Link>
                 </div>
               ) : (
@@ -280,7 +308,7 @@ export default function Navbar() {
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-[10px] text-gray-500">
-                            Product
+                            {isArabic ? "منتج" : "Product"}
                           </div>
                         )}
                       </div>
@@ -302,7 +330,11 @@ export default function Navbar() {
                             type="button"
                             onClick={() => removeFromCart(item.id)}
                             className="h-fit text-gray-400 transition hover:text-red-500"
-                            aria-label="Remove item"
+                            aria-label={
+                              isArabic
+                                ? "حذف المنتج"
+                                : "Remove item"
+                            }
                           >
                             <Trash2 size={16} />
                           </button>
@@ -360,7 +392,9 @@ export default function Navbar() {
             {items.length > 0 && (
               <div className="border-t border-black/10 bg-white px-6 py-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Subtotal</span>
+                  <span className="text-gray-500">
+                    {isArabic ? "الإجمالي الفرعي" : "Subtotal"}
+                  </span>
 
                   <span className="font-medium">
                     EGP {subtotal.toLocaleString()}
@@ -368,7 +402,9 @@ export default function Navbar() {
                 </div>
 
                 <p className="mt-2 text-xs text-gray-400">
-                  Shipping calculated at checkout.
+                  {isArabic
+                    ? "يتم حساب الشحن عند إتمام الطلب."
+                    : "Shipping calculated at checkout."}
                 </p>
 
                 <Link
@@ -376,7 +412,7 @@ export default function Navbar() {
                   onClick={() => closeCart()}
                   className="mt-5 flex w-full items-center justify-center border border-black py-3.5 text-sm font-medium transition hover:bg-black hover:text-white"
                 >
-                  View Cart
+                  {isArabic ? "عرض السلة" : "View Cart"}
                 </Link>
 
                 <Link
@@ -384,7 +420,7 @@ export default function Navbar() {
                   onClick={() => closeCart()}
                   className="mt-3 flex w-full items-center justify-center bg-black py-3.5 text-sm font-medium text-white transition hover:bg-gray-800"
                 >
-                  Checkout
+                  {isArabic ? "إتمام الطلب" : "Checkout"}
                 </Link>
               </div>
             )}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-
+import { LanguageProvider } from "@/components/LanguageProvider";
 import Script from "next/script";
 
 import "./globals.css";
@@ -328,7 +328,7 @@ export default function RootLayout({
 
         {/* ========================= */}
 
-
+      <LanguageProvider>
         <CartProvider>
 
           <Navbar />
@@ -336,6 +336,7 @@ export default function RootLayout({
           {children}
 
         </CartProvider>
+      </LanguageProvider>
         <Chatbot />
 
       </body>

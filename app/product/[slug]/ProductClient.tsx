@@ -1,7 +1,8 @@
 "use client";
+
 import ProductLeadForm from "@/components/ProductLeadForm";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -9,6 +10,9 @@ import {
   Minus,
   Plus,
   ArrowLeft,
+  Zap,
+  Truck,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useCart } from "@/components/Providers/CartProvider";
@@ -58,6 +62,7 @@ type ReviewStats = {
 
 export default function ProductPage() {
   const params = useParams();
+  const router = useRouter();
 
   const {
     addToCart,
@@ -77,6 +82,9 @@ export default function ProductPage() {
     useState(0);
 
   const [addedToCart, setAddedToCart] =
+    useState(false);
+
+  const [buyingNow, setBuyingNow] =
     useState(false);
 
   // Reviews
@@ -292,13 +300,13 @@ export default function ProductPage() {
     );
   };
 
-  // ADD TO CART
-  const handleAddToCart = () => {
+  // ADD PRODUCT TO CART
+  const addCurrentProductToCart = () => {
     if (
       !product ||
       product.stock <= 0
     ) {
-      return;
+      return false;
     }
 
     addToCart({
@@ -309,6 +317,25 @@ export default function ProductPage() {
       image: product.images[0],
       stock: product.stock,
     });
+
+    return true;
+  };
+
+  // ADD TO CART
+  const handleAddToCart = () => {
+    if (
+      !product ||
+      product.stock <= 0
+    ) {
+      return;
+    }
+
+    const added =
+      addCurrentProductToCart();
+
+    if (!added) {
+      return;
+    }
 
     // META PIXEL
     const fbq = (window as any).fbq;
@@ -399,6 +426,104 @@ export default function ProductPage() {
     setTimeout(() => {
       setAddedToCart(false);
     }, 3000);
+  };
+
+  // BUY NOW
+  const handleBuyNow = () => {
+    if (
+      !product ||
+      product.stock <= 0 ||
+      buyingNow
+    ) {
+      return;
+    }
+
+    const added =
+      addCurrentProductToCart();
+
+    if (!added) {
+      return;
+    }
+
+    setBuyingNow(true);
+
+    // META PIXEL
+    const fbq = (window as any).fbq;
+
+    if (typeof fbq === "function") {
+      fbq("track", "AddToCart", {
+        content_ids: [product.id],
+        content_name: product.name,
+        content_type: "product",
+        value:
+          Number(product.price) *
+          quantity,
+        currency: "EGP",
+      });
+
+      console.log(
+        "META BUY NOW ADDTOCART WORKING",
+        product.name
+      );
+    }
+
+    // GOOGLE ANALYTICS
+    const gtag = (window as any).gtag;
+
+    if (typeof gtag === "function") {
+      gtag("event", "add_to_cart", {
+        currency: "EGP",
+        value:
+          Number(product.price) *
+          quantity,
+        items: [
+          {
+            item_id: product.id,
+            item_name: product.name,
+            price: Number(product.price),
+            quantity,
+          },
+        ],
+      });
+
+      console.log(
+        "GA4 BUY NOW ADD_TO_CART WORKING",
+        product.name
+      );
+    }
+
+    // TIKTOK PIXEL
+    const ttq = (window as any).ttq;
+
+    if (
+      ttq &&
+      typeof ttq.track === "function"
+    ) {
+      ttq.track("AddToCart", {
+        content_id: product.id,
+        content_name: product.name,
+        content_type: "product",
+        value:
+          Number(product.price) *
+          quantity,
+        currency: "EGP",
+        quantity,
+      });
+
+      console.log(
+        "TIKTOK BUY NOW ADDTOCART WORKING",
+        product.name
+      );
+    }
+
+    /*
+      IMPORTANT:
+      We keep the existing Cart and Checkout.
+      Buy Now simply adds the product to the
+      existing cart and sends the customer to
+      the existing checkout page.
+    */
+    router.push("/checkout");
   };
 
   // SUBMIT REVIEW
@@ -667,19 +792,19 @@ export default function ProductPage() {
     product.stock <= 0;
 
   return (
-    <main className="min-h-screen bg-[#F8F7F4] px-6 py-16 md:py-24">
+    <main className="min-h-screen bg-[#F8F7F4] px-4 py-8 sm:px-6 md:py-16">
       <div className="mx-auto max-w-7xl">
 
         {/* BACK TO SHOP */}
         <Link
           href="/shop"
-          className="mb-10 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-black/50 transition hover:text-black"
+          className="mb-8 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-black/50 transition hover:text-black md:mb-10"
         >
           <ArrowLeft size={14} />
           Back to Shop
         </Link>
 
-        <div className="grid gap-12 md:grid-cols-2 lg:gap-20">
+        <div className="grid gap-8 md:grid-cols-2 md:gap-12 lg:gap-20">
 
           {/* PRODUCT GALLERY */}
           <div>
@@ -707,14 +832,14 @@ export default function ProductPage() {
 
               {/* FEATURED */}
               {product.isFeatured && (
-                <span className="absolute left-5 top-5 bg-white px-4 py-3 text-[9px] uppercase tracking-[0.2em]">
+                <span className="absolute left-4 top-4 bg-white px-4 py-3 text-[9px] uppercase tracking-[0.2em] md:left-5 md:top-5">
                   Featured
                 </span>
               )}
 
               {/* SALE */}
               {discount && (
-                <span className="absolute right-5 top-5 bg-black px-4 py-3 text-[9px] uppercase tracking-[0.2em] text-white">
+                <span className="absolute right-4 top-4 bg-black px-4 py-3 text-[9px] uppercase tracking-[0.2em] text-white md:right-5 md:top-5">
                   -{discount}%
                 </span>
               )}
@@ -722,7 +847,7 @@ export default function ProductPage() {
 
             {/* THUMBNAILS */}
             {product.images.length > 1 && (
-              <div className="mt-4 grid grid-cols-4 gap-3">
+              <div className="mt-3 grid grid-cols-4 gap-2 md:mt-4 md:gap-3">
                 {product.images.map(
                   (image, index) => (
                     <button
@@ -757,24 +882,24 @@ export default function ProductPage() {
           </div>
 
           {/* PRODUCT INFO */}
-          <div className="flex flex-col justify-center">
+          <div className="flex flex-col">
 
             {/* CATEGORY */}
             <Link
               href={`/shop?category=${product.category.slug}`}
-              className="text-xs text-zinc-400 hover:text-black"
+              className="text-xs uppercase tracking-[0.15em] text-zinc-400 transition hover:text-black"
             >
               {product.category.name}
             </Link>
 
             {/* NAME */}
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl md:mt-4 md:text-5xl">
               {product.name}
             </h1>
 
             {/* PRICE */}
-            <div className="mt-6 flex items-center gap-4">
-              <p className="text-xl">
+            <div className="mt-5 flex flex-wrap items-center gap-3 md:mt-6 md:gap-4">
+              <p className="text-2xl font-medium">
                 EGP{" "}
                 {price.toLocaleString(
                   "en-US"
@@ -789,10 +914,16 @@ export default function ProductPage() {
                   )}
                 </p>
               )}
+
+              {discount && (
+                <span className="bg-black px-3 py-1.5 text-[9px] uppercase tracking-[0.15em] text-white">
+                  Save {discount}%
+                </span>
+              )}
             </div>
 
             {/* QUICK RATING */}
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3">
               {reviewStats &&
               reviewStats.totalReviews >
                 0 ? (
@@ -824,8 +955,8 @@ export default function ProductPage() {
               )}
             </div>
 
-            {/* DESCRIPTION */}
-            <div className="mt-8 border-y border-black/10 py-7">
+            {/* SHORT DESCRIPTION */}
+            <div className="mt-6 border-y border-black/10 py-6 md:mt-8 md:py-7">
               <p className="text-sm leading-7 text-black/60">
                 {product.description ||
                   "A premium RAQEI product designed with simplicity, quality and modern style in mind."}
@@ -833,9 +964,9 @@ export default function ProductPage() {
             </div>
 
             {/* STOCK */}
-            <div className="mt-6">
+            <div className="mt-5">
               {isOutOfStock ? (
-                <p className="text-xs uppercase tracking-[0.2em] text-red-500">
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-red-500">
                   Out of Stock
                 </p>
               ) : (
@@ -845,122 +976,233 @@ export default function ProductPage() {
               )}
             </div>
 
-            {/* QUANTITY */}
+            {/* QUICK PURCHASE BOX */}
             {!isOutOfStock && (
-              <div className="mt-8">
-                <p className="mb-3 text-sm font-medium">
-                  Quantity
+              <div className="mt-6 border border-black/10 bg-white p-5 md:mt-8 md:p-7">
+
+                <p className="text-xs uppercase tracking-[0.2em] text-black/40">
+                  Quick Purchase
                 </p>
 
-                <div className="flex w-fit items-center border border-black/15 bg-white">
-                  <button
-                    type="button"
-                    onClick={
-                      decreaseQuantity
-                    }
-                    className="flex h-12 w-12 items-center justify-center transition hover:bg-black hover:text-white"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus size={15} />
-                  </button>
+                {/* QUANTITY */}
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Quantity
+                    </p>
 
-                  <span className="flex h-12 w-14 items-center justify-center border-x border-black/15 text-sm font-medium">
-                    {quantity}
+                    <p className="mt-1 text-xs text-black/40">
+                      Select the quantity you want
+                    </p>
+                  </div>
+
+                  <div className="flex w-fit items-center border border-black/15 bg-[#F8F7F4]">
+                    <button
+                      type="button"
+                      onClick={
+                        decreaseQuantity
+                      }
+                      className="flex h-11 w-11 items-center justify-center transition hover:bg-black hover:text-white"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus size={15} />
+                    </button>
+
+                    <span className="flex h-11 w-12 items-center justify-center border-x border-black/15 text-sm font-medium">
+                      {quantity}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={
+                        increaseQuantity
+                      }
+                      className="flex h-11 w-11 items-center justify-center transition hover:bg-black hover:text-white"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* TOTAL */}
+                <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-5">
+                  <span className="text-sm text-black/40">
+                    Total
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={
-                      increaseQuantity
-                    }
-                    className="flex h-12 w-12 items-center justify-center transition hover:bg-black hover:text-white"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus size={15} />
-                  </button>
+                  <span className="text-xl font-semibold">
+                    EGP{" "}
+                    {(
+                      price * quantity
+                    ).toLocaleString(
+                      "en-US"
+                    )}
+                  </span>
                 </div>
+
+                {/* BUY NOW */}
+                <button
+                  type="button"
+                  onClick={
+                    handleBuyNow
+                  }
+                  disabled={buyingNow}
+                  className="mt-5 flex w-full items-center justify-center gap-3 bg-black py-5 text-sm font-medium text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/50"
+                >
+                  <Zap size={18} />
+
+                  {buyingNow
+                    ? "Processing..."
+                    : "Buy Now"}
+                </button>
+
+                {/* ADD TO CART */}
+                <button
+                  type="button"
+                  onClick={
+                    handleAddToCart
+                  }
+                  className="mt-3 flex w-full items-center justify-center gap-3 border border-black bg-white py-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+                >
+                  <ShoppingBag size={18} />
+
+                  {addedToCart
+                    ? "Added to Cart"
+                    : "Add to Cart"}
+                </button>
+
+                {/* CART SUCCESS */}
+                {addedToCart && (
+                  <div className="mt-4 border border-black/10 bg-[#F8F7F4] px-5 py-4 text-center text-xs uppercase tracking-[0.15em]">
+                    Product added to cart successfully.
+                  </div>
+                )}
+
+                {/* SHIPPING / TRUST */}
+                <div className="mt-6 grid gap-4 border-t border-black/10 pt-5 sm:grid-cols-3">
+
+                  <div className="flex items-center gap-3">
+                    <Truck
+                      size={17}
+                      className="shrink-0 text-black/60"
+                    />
+
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.12em]">
+                        Shipping
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-black/40">
+                        Calculated at checkout
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck
+                      size={17}
+                      className="shrink-0 text-black/60"
+                    />
+
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.12em]">
+                        Secure Order
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-black/40">
+                        Safe checkout
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <ShoppingBag
+                      size={17}
+                      className="shrink-0 text-black/60"
+                    />
+
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-[0.12em]">
+                        Easy Shopping
+                      </p>
+
+                      <p className="mt-1 text-[10px] text-black/40">
+                        Fast checkout
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+
               </div>
             )}
 
-            {/* TOTAL */}
-            {!isOutOfStock && (
-              <div className="mt-8 flex items-center justify-between border-t border-black/10 pt-6">
-                <span className="text-sm text-black/40">
-                  Total
-                </span>
-
-                <span className="text-xl font-semibold">
-                  EGP{" "}
-                  {(
-                    price * quantity
-                  ).toLocaleString(
-                    "en-US"
-                  )}
-                </span>
+            {/* OUT OF STOCK PURCHASE AREA */}
+            {isOutOfStock && (
+              <div className="mt-8 border border-red-200 bg-red-50 p-6">
+                <p className="text-center text-sm font-medium text-red-600">
+                  This product is currently out of stock.
+                </p>
               </div>
             )}
 
-            {/* ADD TO CART */}
-            <button
-              type="button"
-              onClick={
-                handleAddToCart
-              }
-              disabled={isOutOfStock}
-              className={`mt-6 flex w-full items-center justify-center gap-3 py-5 text-sm font-medium transition ${
-                isOutOfStock
-                  ? "cursor-not-allowed bg-black/10 text-black/30"
-                  : "bg-black text-white hover:bg-black/80"
-              }`}
-            >
-              <ShoppingBag size={18} />
-
-              {isOutOfStock
-                ? "Out of Stock"
-                : addedToCart
-                ? "Added to Cart"
-                : "Add to Cart"}
-            </button>
-
-            <ProductLeadForm
-              productId={product.id}
-              productName={product.name}
-            />
-
-            {addedToCart && (
-              <div className="mt-4 border border-black/10 bg-white px-5 py-4 text-center text-xs uppercase tracking-[0.15em]">
-                Product added to cart successfully.
-              </div>
-            )}
+            {/* PRODUCT LEAD FORM */}
+            <div className="mt-6">
+              <ProductLeadForm
+                productId={product.id}
+                productName={product.name}
+                productPrice={price}
+                productStock={product.stock}
+              />
+            </div>
 
             {/* VIEW CART */}
             <Link
               href="/cart"
-              className="mt-5 text-center text-xs uppercase tracking-[0.2em] underline underline-offset-8"
+              className="mt-5 flex items-center justify-center text-xs uppercase tracking-[0.2em] underline underline-offset-8"
             >
               View Cart
             </Link>
 
             {/* PRODUCT DETAILS */}
-            <div className="mt-10 space-y-4 border-t border-black/10 pt-6">
+            <div className="mt-8 space-y-4 border-t border-black/10 pt-6">
 
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between gap-6 text-xs">
                 <span className="text-black/40">
                   SKU
                 </span>
 
-                <span>
+                <span className="text-right">
                   {product.sku}
                 </span>
               </div>
 
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between gap-6 text-xs">
                 <span className="text-black/40">
                   Category
                 </span>
 
-                <span>
+                <span className="text-right">
                   {product.category.name}
+                </span>
+              </div>
+
+              <div className="flex justify-between gap-6 text-xs">
+                <span className="text-black/40">
+                  Availability
+                </span>
+
+                <span
+                  className={
+                    isOutOfStock
+                      ? "text-red-500"
+                      : "text-green-600"
+                  }
+                >
+                  {isOutOfStock
+                    ? "Out of Stock"
+                    : "In Stock"}
                 </span>
               </div>
 
@@ -968,10 +1210,62 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* REVIEWS SECTION */}
-        <section className="mt-24 border-t border-black/10 pt-16">
+        {/* PRODUCT DESCRIPTION */}
+        <section className="mt-20 border-t border-black/10 pt-12 md:mt-24 md:pt-16">
 
-          <div className="grid gap-16 lg:grid-cols-[0.8fr_1.2fr]">
+          <div className="mx-auto max-w-4xl">
+
+            <p className="text-xs uppercase tracking-[0.3em] text-black/40">
+              Product Details
+            </p>
+
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+              About This Product
+            </h2>
+
+            <div className="mt-7 text-sm leading-8 text-black/60">
+              {product.description ? (
+                <p>
+                  {product.description}
+                </p>
+              ) : (
+                <p>
+                  A premium RAQEI product designed
+                  with simplicity, quality and modern
+                  style in mind.
+                </p>
+              )}
+            </div>
+
+            {/* PRODUCT IMAGES */}
+            {product.images.length > 1 && (
+              <div className="mt-12 grid gap-5 sm:grid-cols-2">
+                {product.images.map(
+                  (image, index) => (
+                    <div
+                      key={`${image}-detail-${index}`}
+                      className="overflow-hidden bg-[#E8E5DF]"
+                    >
+                      <img
+                        src={image}
+                        alt={`${product.name} detail ${
+                          index + 1
+                        }`}
+                        className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                      />
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+
+          </div>
+        </section>
+
+        {/* REVIEWS SECTION */}
+        <section className="mt-20 border-t border-black/10 pt-12 md:mt-24 md:pt-16">
+
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
 
             {/* REVIEW SUMMARY */}
             <div>
@@ -1073,7 +1367,7 @@ export default function ProductPage() {
             </div>
 
             {/* REVIEW FORM */}
-            <div className="border border-black/10 bg-white p-7 md:p-10">
+            <div className="border border-black/10 bg-white p-6 md:p-10">
 
               <p className="text-xs uppercase tracking-[0.25em] text-black/40">
                 Share Your Experience
@@ -1206,9 +1500,9 @@ export default function ProductPage() {
           </div>
 
           {/* REVIEWS LIST */}
-          <div className="mt-20">
+          <div className="mt-16 md:mt-20">
 
-            <div className="mb-8 flex items-center justify-between border-b border-black/10 pb-5">
+            <div className="mb-8 flex flex-col gap-3 border-b border-black/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
 
               <h3 className="text-xl font-medium">
                 Customer Reviews
@@ -1251,7 +1545,7 @@ export default function ProductPage() {
 
                         <div>
 
-                          <div className="flex items-center gap-4">
+                          <div className="flex flex-wrap items-center gap-4">
 
                             <h4 className="text-sm font-medium">
                               {review.user.name ||

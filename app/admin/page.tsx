@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type DashboardStats = {
   totalOrders: number;
@@ -95,6 +96,9 @@ const adminSections = [
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+
+  const { language } = useLanguage();
+  const isArabic = language === "ar";
 
   const [stats, setStats] =
     useState<DashboardStats | null>(null);
@@ -321,7 +325,8 @@ export default function AdminDashboardPage() {
       );
     }
   };
-    // =========================
+
+  // =========================
   // Mark all notifications as read
   // =========================
 
@@ -401,9 +406,12 @@ export default function AdminDashboardPage() {
   // =========================
 
   const formatCurrency = (value: number) => {
-    return `${value.toLocaleString("en-US", {
-      maximumFractionDigits: 2,
-    })} EGP`;
+    return `${value.toLocaleString(
+      isArabic ? "ar-EG" : "en-US",
+      {
+        maximumFractionDigits: 2,
+      }
+    )} EGP`;
   };
 
   const formatNotificationTime = (
@@ -423,11 +431,15 @@ export default function AdminDashboardPage() {
     );
 
     if (minutes < 1) {
-      return "Just now";
+      return isArabic
+        ? "الآن"
+        : "Just now";
     }
 
     if (minutes < 60) {
-      return `${minutes}m ago`;
+      return isArabic
+        ? `منذ ${minutes} د`
+        : `${minutes}m ago`;
     }
 
     const hours = Math.floor(
@@ -435,7 +447,9 @@ export default function AdminDashboardPage() {
     );
 
     if (hours < 24) {
-      return `${hours}h ago`;
+      return isArabic
+        ? `منذ ${hours} س`
+        : `${hours}h ago`;
     }
 
     const days = Math.floor(
@@ -443,11 +457,13 @@ export default function AdminDashboardPage() {
     );
 
     if (days < 7) {
-      return `${days}d ago`;
+      return isArabic
+        ? `منذ ${days} ي`
+        : `${days}d ago`;
     }
 
     return notificationDate.toLocaleDateString(
-      "en-US",
+      isArabic ? "ar-EG" : "en-US",
       {
         month: "short",
         day: "numeric",
@@ -459,7 +475,7 @@ export default function AdminDashboardPage() {
     date: string
   ) => {
     return new Date(date).toLocaleDateString(
-      "en-US",
+      isArabic ? "ar-EG" : "en-US",
       {
         month: "short",
         day: "numeric",
@@ -468,8 +484,58 @@ export default function AdminDashboardPage() {
     );
   };
 
+  const getAdminSectionTitle = (
+    title: string
+  ) => {
+    if (!isArabic) {
+      return title;
+    }
+
+    const translations: Record<
+      string,
+      string
+    > = {
+      Orders: "الطلبات",
+      Products: "المنتجات",
+      Categories: "التصنيفات",
+      Customers: "العملاء",
+      Reviews: "التقييمات",
+      Analytics: "التحليلات",
+      Settings: "الإعدادات",
+    };
+
+    return translations[title] || title;
+  };
+
+  const getAdminSectionDescription = (
+    title: string,
+    description: string
+  ) => {
+    if (!isArabic) {
+      return description;
+    }
+
+    const translations: Record<
+      string,
+      string
+    > = {
+      Orders: "إدارة طلبات العملاء",
+      Products: "إدارة المنتجات والمخزون",
+      Categories: "إدارة تصنيفات المنتجات",
+      Customers: "عرض وإدارة العملاء",
+      Reviews: "إدارة تقييمات العملاء",
+      Analytics: "تحليلات المبيعات والمتجر",
+      Settings: "إعدادات المتجر والإدارة",
+    };
+
+    return translations[title] || description;
+  };
+
   return (
-    <main className="min-h-screen bg-[#F8F7F4] px-6 py-12 md:px-10 md:py-20">
+    <main
+      dir={isArabic ? "rtl" : "ltr"}
+      className="min-h-screen bg-[#F8F7F4] px-6 py-12 md:px-10 md:py-20"
+    >
       <div className="mx-auto max-w-7xl">
 
         {/* HEADER */}
@@ -482,11 +548,15 @@ export default function AdminDashboardPage() {
             </p>
 
             <h1 className="mt-4 text-5xl font-semibold tracking-tight md:text-7xl">
-              Dashboard
+              {isArabic
+                ? "لوحة التحكم"
+                : "Dashboard"}
             </h1>
 
             <p className="mt-5 max-w-xl text-sm leading-7 text-black/50">
-              Manage your entire RAQEI store from one place.
+              {isArabic
+                ? "إدارة متجر RAQEI بالكامل من مكان واحد."
+                : "Manage your entire RAQEI store from one place."}
             </p>
           </div>
 
@@ -505,7 +575,11 @@ export default function AdminDashboardPage() {
                   )
                 }
                 className="relative flex h-12 w-12 items-center justify-center border border-black/10 bg-white transition hover:border-black"
-                aria-label="Notifications"
+                aria-label={
+                  isArabic
+                    ? "الإشعارات"
+                    : "Notifications"
+                }
               >
                 <span className="text-xl">
                   🔔
@@ -533,12 +607,16 @@ export default function AdminDashboardPage() {
 
                     <div>
                       <p className="text-xs uppercase tracking-[0.2em] text-black/40">
-                        Notifications
+                        {isArabic
+                          ? "الإشعارات"
+                          : "Notifications"}
                       </p>
 
                       <p className="mt-1 text-sm font-medium">
                         {unreadNotifications}{" "}
-                        unread
+                        {isArabic
+                          ? "غير مقروءة"
+                          : "unread"}
                       </p>
                     </div>
 
@@ -547,10 +625,14 @@ export default function AdminDashboardPage() {
                       {unreadNotifications > 0 && (
                         <button
                           type="button"
-                          onClick={markAllNotificationsAsRead}
+                          onClick={
+                            markAllNotificationsAsRead
+                          }
                           className="text-[10px] uppercase tracking-[0.12em] text-black/40 transition hover:text-black"
                         >
-                          Mark all as read
+                          {isArabic
+                            ? "تحديد الكل كمقروء"
+                            : "Mark all as read"}
                         </button>
                       )}
 
@@ -560,7 +642,11 @@ export default function AdminDashboardPage() {
                           setNotificationsOpen(false)
                         }
                         className="text-xl text-black/30 transition hover:text-black"
-                        aria-label="Close notifications"
+                        aria-label={
+                          isArabic
+                            ? "إغلاق الإشعارات"
+                            : "Close notifications"
+                        }
                       >
                         ×
                       </button>
@@ -576,7 +662,9 @@ export default function AdminDashboardPage() {
                       notifications.length ===
                         0 && (
                         <div className="px-5 py-10 text-center text-sm text-black/40">
-                          Loading...
+                          {isArabic
+                            ? "جاري التحميل..."
+                            : "Loading..."}
                         </div>
                       )}
 
@@ -590,11 +678,15 @@ export default function AdminDashboardPage() {
                           </div>
 
                           <p className="mt-3 text-sm font-medium">
-                            No notifications
+                            {isArabic
+                              ? "لا توجد إشعارات"
+                              : "No notifications"}
                           </p>
 
                           <p className="mt-1 text-xs text-black/40">
-                            New orders will appear here.
+                            {isArabic
+                              ? "ستظهر الطلبات الجديدة هنا."
+                              : "New orders will appear here."}
                           </p>
 
                         </div>
@@ -678,7 +770,9 @@ export default function AdminDashboardPage() {
                   {notifications.length >
                     5 && (
                     <div className="border-t border-black/10 px-5 py-3 text-center text-[10px] uppercase tracking-[0.15em] text-black/30">
-                      Showing latest 5
+                      {isArabic
+                        ? "عرض أحدث 5 إشعارات"
+                        : "Showing latest 5"}
                     </div>
                   )}
 
@@ -691,14 +785,18 @@ export default function AdminDashboardPage() {
               href="/"
               className="w-fit border border-black/10 bg-white px-6 py-3 text-xs uppercase tracking-[0.15em] transition hover:border-black"
             >
-              View Store
+              {isArabic
+                ? "عرض المتجر"
+                : "View Store"}
             </Link>
 
             <button
               onClick={handleLogout}
               className="w-fit border border-black bg-black px-6 py-3 text-xs uppercase tracking-[0.15em] text-white transition hover:bg-black/90"
             >
-              Logout
+              {isArabic
+                ? "تسجيل الخروج"
+                : "Logout"}
             </button>
 
           </div>
@@ -720,7 +818,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Orders
+              {isArabic
+                ? "الطلبات"
+                : "Orders"}
             </p>
 
             <p className="mt-4 text-3xl font-semibold">
@@ -731,8 +831,14 @@ export default function AdminDashboardPage() {
 
             <p className="mt-2 text-xs text-black/30">
               {loading
-                ? "Loading..."
-                : `${stats?.pendingOrders ?? 0} pending`}
+                ? isArabic
+                  ? "جاري التحميل..."
+                  : "Loading..."
+                : `${stats?.pendingOrders ?? 0} ${
+                    isArabic
+                      ? "قيد الانتظار"
+                      : "pending"
+                  }`}
             </p>
           </div>
 
@@ -740,7 +846,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Products
+              {isArabic
+                ? "المنتجات"
+                : "Products"}
             </p>
 
             <p className="mt-4 text-3xl font-semibold">
@@ -751,8 +859,14 @@ export default function AdminDashboardPage() {
 
             <p className="mt-2 text-xs text-black/30">
               {loading
-                ? "Loading..."
-                : `${stats?.activeProducts ?? 0} active`}
+                ? isArabic
+                  ? "جاري التحميل..."
+                  : "Loading..."
+                : `${stats?.activeProducts ?? 0} ${
+                    isArabic
+                      ? "نشطة"
+                      : "active"
+                  }`}
             </p>
           </div>
 
@@ -760,7 +874,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Customers
+              {isArabic
+                ? "العملاء"
+                : "Customers"}
             </p>
 
             <p className="mt-4 text-3xl font-semibold">
@@ -770,7 +886,9 @@ export default function AdminDashboardPage() {
             </p>
 
             <p className="mt-2 text-xs text-black/30">
-              Registered customers
+              {isArabic
+                ? "العملاء المسجلون"
+                : "Registered customers"}
             </p>
           </div>
 
@@ -778,7 +896,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Leads
+              {isArabic
+                ? "العملاء المحتملون"
+                : "Leads"}
             </p>
 
             <p className="mt-4 text-3xl font-semibold">
@@ -788,7 +908,9 @@ export default function AdminDashboardPage() {
             </p>
 
             <p className="mt-2 text-xs text-black/30">
-              Product inquiries
+              {isArabic
+                ? "استفسارات المنتجات"
+                : "Product inquiries"}
             </p>
           </div>
 
@@ -796,7 +918,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Sales
+              {isArabic
+                ? "المبيعات"
+                : "Sales"}
             </p>
 
             <p className="mt-4 text-3xl font-semibold">
@@ -808,7 +932,9 @@ export default function AdminDashboardPage() {
             </p>
 
             <p className="mt-2 text-xs text-black/30">
-              Excluding cancelled orders
+              {isArabic
+                ? "باستثناء الطلبات الملغاة"
+                : "Excluding cancelled orders"}
             </p>
           </div>
         </div>
@@ -819,7 +945,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Pending Orders
+              {isArabic
+                ? "الطلبات المعلقة"
+                : "Pending Orders"}
             </p>
 
             <p className="mt-3 text-2xl font-semibold">
@@ -831,7 +959,9 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Low Stock
+              {isArabic
+                ? "المخزون المنخفض"
+                : "Low Stock"}
             </p>
 
             <p className="mt-3 text-2xl font-semibold">
@@ -841,13 +971,17 @@ export default function AdminDashboardPage() {
             </p>
 
             <p className="mt-2 text-xs text-black/30">
-              5 units or less
+              {isArabic
+                ? "5 وحدات أو أقل"
+                : "5 units or less"}
             </p>
           </div>
 
           <div className="bg-white p-6">
             <p className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-              Average Order Value
+              {isArabic
+                ? "متوسط قيمة الطلب"
+                : "Average Order Value"}
             </p>
 
             <p className="mt-3 text-2xl font-semibold">
@@ -868,15 +1002,21 @@ export default function AdminDashboardPage() {
 
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-black/40">
-                Sales Opportunities
+                {isArabic
+                  ? "فرص المبيعات"
+                  : "Sales Opportunities"}
               </p>
 
               <h2 className="mt-2 text-2xl font-semibold">
-                Recent Leads
+                {isArabic
+                  ? "أحدث العملاء المحتملين"
+                  : "Recent Leads"}
               </h2>
 
               <p className="mt-2 text-sm text-black/40">
-                Customers who submitted product inquiries.
+                {isArabic
+                  ? "العملاء الذين أرسلوا استفسارات عن المنتجات."
+                  : "Customers who submitted product inquiries."}
               </p>
             </div>
 
@@ -885,7 +1025,9 @@ export default function AdminDashboardPage() {
               onClick={loadLeads}
               className="w-fit border border-black/10 bg-white px-5 py-3 text-[10px] uppercase tracking-[0.15em] transition hover:border-black"
             >
-              Refresh Leads
+              {isArabic
+                ? "تحديث العملاء المحتملين"
+                : "Refresh Leads"}
             </button>
 
           </div>
@@ -906,11 +1048,15 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <p className="mt-4 text-sm font-medium">
-                  No leads yet
+                  {isArabic
+                    ? "لا يوجد عملاء محتملون حتى الآن"
+                    : "No leads yet"}
                 </p>
 
                 <p className="mt-2 text-xs text-black/40">
-                  New product inquiries will appear here.
+                  {isArabic
+                    ? "ستظهر استفسارات المنتجات الجديدة هنا."
+                    : "New product inquiries will appear here."}
                 </p>
 
               </div>
@@ -927,23 +1073,33 @@ export default function AdminDashboardPage() {
                     <tr className="border-b border-black/10">
 
                       <th className="px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-black/40">
-                        Customer
+                        {isArabic
+                          ? "العميل"
+                          : "Customer"}
                       </th>
 
                       <th className="px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-black/40">
-                        Phone
+                        {isArabic
+                          ? "الهاتف"
+                          : "Phone"}
                       </th>
 
                       <th className="px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-black/40">
-                        Product
+                        {isArabic
+                          ? "المنتج"
+                          : "Product"}
                       </th>
 
                       <th className="px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-black/40">
-                        Notes
+                        {isArabic
+                          ? "ملاحظات"
+                          : "Notes"}
                       </th>
 
                       <th className="px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-black/40">
-                        Date
+                        {isArabic
+                          ? "التاريخ"
+                          : "Date"}
                       </th>
 
                     </tr>
@@ -988,7 +1144,9 @@ export default function AdminDashboardPage() {
 
                             <p className="text-sm">
                               {lead.product?.name ||
-                                "Unknown product"}
+                                (isArabic
+                                  ? "منتج غير معروف"
+                                  : "Unknown product")}
                             </p>
 
                           </td>
@@ -1023,7 +1181,9 @@ export default function AdminDashboardPage() {
 
               {leads.length > 10 && (
                 <div className="border-t border-black/10 px-6 py-4 text-center text-[10px] uppercase tracking-[0.15em] text-black/30">
-                  Showing latest 10 leads
+                  {isArabic
+                    ? "عرض أحدث 10 عملاء محتملين"
+                    : "Showing latest 10 leads"}
                 </div>
               )}
 
@@ -1038,11 +1198,15 @@ export default function AdminDashboardPage() {
 
           <div className="mb-6">
             <p className="text-[10px] uppercase tracking-[0.2em] text-black/40">
-              Management
+              {isArabic
+                ? "الإدارة"
+                : "Management"}
             </p>
 
             <h2 className="mt-2 text-2xl font-semibold">
-              Store Control
+              {isArabic
+                ? "التحكم في المتجر"
+                : "Store Control"}
             </h2>
           </div>
 
@@ -1057,11 +1221,16 @@ export default function AdminDashboardPage() {
 
                   <div>
                     <h3 className="text-lg font-medium">
-                      {section.title}
+                      {getAdminSectionTitle(
+                        section.title
+                      )}
                     </h3>
 
                     <p className="mt-3 text-xs leading-6 text-black/40">
-                      {section.description}
+                      {getAdminSectionDescription(
+                        section.title,
+                        section.description
+                      )}
                     </p>
                   </div>
 
@@ -1083,16 +1252,21 @@ export default function AdminDashboardPage() {
 
             <div>
               <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                Operations
+                {isArabic
+                  ? "العمليات"
+                  : "Operations"}
               </p>
 
               <h2 className="mt-3 text-2xl font-medium">
-                Manage Orders
+                {isArabic
+                  ? "إدارة الطلبات"
+                  : "Manage Orders"}
               </h2>
 
               <p className="mt-3 max-w-lg text-sm leading-6 text-white/50">
-                View orders, customer information,
-                products, payments and update order status.
+                {isArabic
+                  ? "عرض الطلبات وبيانات العملاء والمنتجات والمدفوعات وتحديث حالة الطلب."
+                  : "View orders, customer information, products, payments and update order status."}
               </p>
             </div>
 
@@ -1100,7 +1274,9 @@ export default function AdminDashboardPage() {
               href="/admin/orders"
               className="w-fit bg-white px-7 py-4 text-xs font-medium uppercase tracking-[0.15em] text-black transition hover:bg-white/90"
             >
-              View Orders
+              {isArabic
+                ? "عرض الطلبات"
+                : "View Orders"}
             </Link>
 
           </div>
