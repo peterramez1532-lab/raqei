@@ -13,7 +13,6 @@ export type CartItem = {
   name: string;
   price: number;
   quantity: number;
-  size?: string;
   image?: string;
   stock?: number;
 };
@@ -21,14 +20,10 @@ export type CartItem = {
 type CartContextType = {
   items: CartItem[];
   addToCart: (item: CartItem) => void;
-  removeFromCart: (
-    id: string,
-    size?: string
-  ) => void;
+  removeFromCart: (id: string) => void;
   updateQuantity: (
     id: string,
-    quantity: number,
-    size?: string
+    quantity: number
   ) => void;
   clearCart: () => void;
   totalItems: number;
@@ -62,7 +57,20 @@ export function CartProvider({
         const parsedCart = JSON.parse(savedCart);
 
         if (Array.isArray(parsedCart)) {
-          setItems(parsedCart);
+          // Remove old size data from carts
+          // saved before the size system was removed.
+          const cleanedCart = parsedCart.map(
+            (item) => {
+              const {
+                size,
+                ...itemWithoutSize
+              } = item;
+
+              return itemWithoutSize;
+            }
+          );
+
+          setItems(cleanedCart);
         }
       }
     } catch (error) {
@@ -93,8 +101,7 @@ export function CartProvider({
     setItems((currentItems) => {
       const existingItem = currentItems.find(
         (cartItem) =>
-          cartItem.id === item.id &&
-          cartItem.size === item.size
+          cartItem.id === item.id
       );
 
       if (existingItem) {
@@ -106,8 +113,7 @@ export function CartProvider({
           : newQuantity;
 
         return currentItems.map((cartItem) =>
-          cartItem.id === item.id &&
-          cartItem.size === item.size
+          cartItem.id === item.id
             ? {
                 ...cartItem,
                 quantity: finalQuantity,
@@ -135,17 +141,10 @@ export function CartProvider({
   };
 
   // REMOVE FROM CART
-  const removeFromCart = (
-    id: string,
-    size?: string
-  ) => {
+  const removeFromCart = (id: string) => {
     setItems((currentItems) =>
       currentItems.filter(
-        (item) =>
-          !(
-            item.id === id &&
-            item.size === size
-          )
+        (item) => item.id !== id
       )
     );
   };
@@ -153,20 +152,16 @@ export function CartProvider({
   // UPDATE QUANTITY
   const updateQuantity = (
     id: string,
-    quantity: number,
-    size?: string
+    quantity: number
   ) => {
     if (quantity <= 0) {
-      removeFromCart(id, size);
+      removeFromCart(id);
       return;
     }
 
     setItems((currentItems) =>
       currentItems.map((item) => {
-        if (
-          item.id === id &&
-          item.size === size
-        ) {
+        if (item.id === id) {
           const finalQuantity = item.stock
             ? Math.min(quantity, item.stock)
             : quantity;

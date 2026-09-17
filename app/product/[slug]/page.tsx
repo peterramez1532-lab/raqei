@@ -24,16 +24,28 @@ type ProductData = {
   };
 };
 
+function getBaseUrl() {
+  // أثناء التطوير المحلي:
+  // استخدم localhost حتى لو NEXT_PUBLIC_SITE_URL فيه raqei.com
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000";
+  }
+
+  // Production
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://raqei.com"
+  );
+}
+
 export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
 
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "http://localhost:3000";
+  const baseUrl = getBaseUrl();
 
+  try {
     const res = await fetch(
       `${baseUrl}/api/products-public/${slug}`,
       {
@@ -116,9 +128,7 @@ export default async function ProductPage({
 }: Props) {
   const { slug } = await params;
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  const baseUrl = getBaseUrl();
 
   let product: ProductData | null = null;
 

@@ -21,7 +21,6 @@ type Order = {
   items: {
     id: string;
     quantity: number;
-    size: string | null;
     price: string;
     product: {
       name: string;

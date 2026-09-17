@@ -1,8 +1,8 @@
 import Link from "next/link";
-
+import ProductImageSlider from "@/components/ProductImageSlider";
 import ShopFilters from "@/components/ShopFilters";
 
-import { prisma } from "../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 type Product = {
 
@@ -276,28 +276,10 @@ export default async function ShopPage({
                 <div className="relative aspect-[4/5] overflow-hidden bg-[#e5e2dc]">
 
 
-                  {product.images.length > 0 ? (
-
-                    <img
-
-                      src={product.images[0]}
-
-                      alt={product.name}
-
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-
-                    />
-
-                  ) : (
-
-                    <div className="flex h-full items-center justify-center text-xs uppercase tracking-[0.2em] text-black/20">
-
-                      Product Image
-
-                    </div>
-
-                  )}
-
+                  <ProductImageSlider
+                  images={product.images}
+                  alt={product.name}
+                  />
 
                   {/* FEATURED */}
 

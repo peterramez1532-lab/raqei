@@ -22,11 +22,10 @@ type Order = {
   shipping: string;
   total: string;
   items: {
-    id: string;
-    quantity: number;
-    price: string;
-    size: string | null;
-    product: {
+      id: string;
+      quantity: number;
+      price: string;
+      product: {
       name: string;
       images: string[];
     };
@@ -274,11 +273,6 @@ export default function OrderConfirmationPage() {
                         Quantity: {item.quantity}
                       </p>
 
-                      {item.size && (
-                        <p>
-                          Size: {item.size}
-                        </p>
-                      )}
                     </div>
                   </div>
 
@@ -457,9 +451,8 @@ export default function OrderConfirmationPage() {
             Back to Home
             <ArrowRight size={18} />
           </Link>
-
         </div>
-
+            
       </div>
     </main>
   );

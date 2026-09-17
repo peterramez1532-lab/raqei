@@ -12,6 +12,13 @@ type Category = {
   slug: string;
 };
 
+type ProductMedia = {
+  id?: string;
+  url: string;
+  type: "IMAGE" | "GIF" | "VIDEO";
+  sortOrder: number;
+};
+
 type Product = {
   id: string;
   name: string;
@@ -24,6 +31,7 @@ type Product = {
   isActive: boolean;
   isFeatured: boolean;
   images: string[];
+  media?: ProductMedia[];
   category: Category;
 };
 
@@ -39,6 +47,15 @@ type ProductForm = {
   image: string;
   isActive: boolean;
   isFeatured: boolean;
+};
+
+type MediaItem = {
+  id?: string;
+  url: string;
+  type: "IMAGE" | "GIF" | "VIDEO";
+  file?: File;
+  previewUrl?: string;
+  sortOrder: number;
 };
 
 type ImportResult = {
@@ -64,6 +81,7 @@ const emptyForm: ProductForm = {
   isActive: true,
   isFeatured: false,
 };
+const MAX_PRODUCT_MEDIA = 5;
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -90,6 +108,10 @@ export default function AdminProductsPage() {
 
   const [imagePreview, setImagePreview] =
     useState("");
+
+  // Multiple Product Media
+  const [mediaItems, setMediaItems] =
+    useState<MediaItem[]>([]);
 
   // Excel Import
   const [showImport, setShowImport] = useState(false);
@@ -207,6 +229,7 @@ export default function AdminProductsPage() {
 
     setImageFile(null);
     setImagePreview("");
+    setMediaItems([]);
 
     setError("");
     setSuccess("");
@@ -245,6 +268,31 @@ export default function AdminProductsPage() {
     setImageFile(null);
     setImagePreview(existingImage);
 
+    const existingMedia =
+      product.media?.length
+        ? product.media
+            .sort(
+              (a, b) =>
+                a.sortOrder -
+                b.sortOrder
+            )
+            .map((item) => ({
+              id: item.id,
+              url: item.url,
+              type: item.type,
+              sortOrder:
+                item.sortOrder,
+            }))
+        : product.images?.map(
+            (url, index) => ({
+              url,
+              type: "IMAGE" as const,
+              sortOrder: index,
+            })
+          ) || [];
+
+    setMediaItems(existingMedia);
+
     setError("");
     setSuccess("");
 
@@ -252,52 +300,203 @@ export default function AdminProductsPage() {
   };
 
   // =========================
-  // IMAGE
+  // IMAGE / MEDIA
   // =========================
 
-  const handleImageChange = (
-    event: React.ChangeEvent<HTMLInputElement>
+  const getMediaType = (
+    file: File
+  ): "IMAGE" | "GIF" | "VIDEO" | null => {
+    if (file.type === "image/gif") {
+      return "GIF";
+    }
+
+    if (
+      [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/avif",
+      ].includes(file.type)
+    ) {
+      return "IMAGE";
+    }
+
+    if (
+      [
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+      ].includes(file.type)
+    ) {
+      return "VIDEO";
+    }
+
+    return null;
+  };
+
+  const handleMediaChange = (
+  event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const file =
-      event.target.files?.[0] || null;
+    const files = Array.from(
+      event.target.files || []
+    );
 
-    if (!file) {
-      return;
-    }
+    // Reset input so the same file can be selected again
+    event.target.value = "";
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/avif",
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      setError(
-        "Only JPG, PNG, WEBP and AVIF images are supported."
-      );
-
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError(
-        "Image size must be less than 5MB."
-      );
-
-      event.target.value = "";
+    if (files.length === 0) {
       return;
     }
 
     setError("");
 
-    setImageFile(file);
+    const currentCount = mediaItems.length;
+    const remainingSlots =
+      MAX_PRODUCT_MEDIA - currentCount;
 
-    const previewUrl =
-      URL.createObjectURL(file);
+    if (remainingSlots <= 0) {
+      setError(
+        `You can add a maximum of ${MAX_PRODUCT_MEDIA} media files per product.`
+      );
+      return;
+    }
 
-    setImagePreview(previewUrl);
+    // Only take enough files to reach 5
+    const filesToAdd = files.slice(
+      0,
+      remainingSlots
+    );
+
+    const newItems: MediaItem[] = [];
+
+    for (const file of filesToAdd) {
+      const mediaType = getMediaType(file);
+
+      if (!mediaType) {
+        setError(
+          "Only JPG, PNG, WEBP, AVIF, GIF, MP4, WebM and MOV files are supported."
+        );
+        continue;
+      }
+
+      const maxSize =
+        mediaType === "VIDEO"
+          ? 50 * 1024 * 1024
+          : 10 * 1024 * 1024;
+
+      if (file.size > maxSize) {
+        setError(
+          mediaType === "VIDEO"
+            ? `${file.name}: Video size must be less than 50MB.`
+            : `${file.name}: Image/GIF size must be less than 10MB.`
+        );
+        continue;
+      }
+
+      const previewUrl =
+        URL.createObjectURL(file);
+
+      newItems.push({
+        url: "",
+        type: mediaType,
+        file,
+        previewUrl,
+        sortOrder:
+          currentCount + newItems.length,
+      });
+    }
+
+    if (files.length > remainingSlots) {
+      setError(
+        `Only ${remainingSlots} more media file${
+          remainingSlots === 1 ? "" : "s"
+        } can be added. Maximum is ${MAX_PRODUCT_MEDIA}.`
+      );
+    }
+
+    if (newItems.length > 0) {
+      setMediaItems((current) => [
+        ...current,
+        ...newItems,
+      ]);
+    }
+  };
+
+  const removeMedia = (
+    index: number
+  ) => {
+    setMediaItems((current) => {
+      const item = current[index];
+
+      if (item?.previewUrl) {
+        URL.revokeObjectURL(
+          item.previewUrl
+        );
+      }
+
+      return current
+        .filter(
+          (_, itemIndex) =>
+            itemIndex !== index
+        )
+        .map((item, itemIndex) => ({
+          ...item,
+          sortOrder: itemIndex,
+        }));
+    });
+  };
+
+  const moveMedia = (
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    setMediaItems((current) => {
+      const targetIndex =
+        direction === "up"
+          ? index - 1
+          : index + 1;
+
+      if (
+        targetIndex < 0 ||
+        targetIndex >= current.length
+      ) {
+        return current;
+      }
+
+      const updated = [...current];
+
+      const currentItem =
+        updated[index];
+
+      updated[index] =
+        updated[targetIndex];
+
+      updated[targetIndex] =
+        currentItem;
+
+      return updated.map(
+        (item, itemIndex) => ({
+          ...item,
+          sortOrder: itemIndex,
+        })
+      );
+    });
+  };
+
+  const clearAllMedia = () => {
+    mediaItems.forEach(
+      (item) => {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(
+            item.previewUrl
+          );
+        }
+      }
+    );
+
+    setMediaItems([]);
+    setImageFile(null);
+    setImagePreview("");
   };
 
   // =========================
@@ -402,6 +601,96 @@ export default function AdminProductsPage() {
         setUploadingImage(false);
       }
 
+      // Upload new product media
+      const uploadedMedia: ProductMedia[] =
+        [];
+
+      const existingMedia =
+        mediaItems.filter(
+          (item) => !item.file
+        );
+
+      for (
+        let index = 0;
+        index < mediaItems.length;
+        index++
+      ) {
+        const mediaItem =
+          mediaItems[index];
+
+        if (!mediaItem.file) {
+          uploadedMedia.push({
+            id: mediaItem.id,
+            url: mediaItem.url,
+            type: mediaItem.type,
+            sortOrder: index,
+          });
+
+          continue;
+        }
+
+        setUploadingImage(true);
+
+        const mediaFormData =
+          new FormData();
+
+        mediaFormData.append(
+          "file",
+          mediaItem.file
+        );
+
+        const uploadResponse =
+          await fetch(
+            "/api/admin/upload",
+            {
+              method: "POST",
+              body: mediaFormData,
+            }
+          );
+
+        const uploadData =
+          await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            uploadData.error ||
+              `Failed to upload media file ${index + 1}.`
+          );
+        }
+
+        uploadedMedia.push({
+          url: uploadData.url,
+          type: mediaItem.type,
+          sortOrder: index,
+        });
+
+        setUploadingImage(false);
+      }
+
+      const finalMedia =
+        uploadedMedia.length > 0
+          ? uploadedMedia
+          : imageUrl.trim()
+          ? [
+              {
+                url: imageUrl.trim(),
+                type: "IMAGE" as const,
+                sortOrder: 0,
+              },
+            ]
+          : [];
+
+      const finalImages =
+        finalMedia
+          .filter(
+            (item) =>
+              item.type === "IMAGE" ||
+              item.type === "GIF"
+          )
+          .map(
+            (item) => item.url
+          );
+
       const url = isEditing
         ? `/api/admin/products/${editingProductId}`
         : "/api/admin/products";
@@ -433,9 +722,8 @@ export default function AdminProductsPage() {
           stock: Number(form.stock),
           categoryId:
             form.categoryId,
-          images: imageUrl.trim()
-            ? [imageUrl.trim()]
-            : [],
+          images: finalImages,
+          media: finalMedia,
           isActive:
             form.isActive,
           isFeatured:
@@ -463,8 +751,7 @@ export default function AdminProductsPage() {
       setEditingProductId(null);
       setForm(emptyForm);
 
-      setImageFile(null);
-      setImagePreview("");
+      clearAllMedia();
 
       await loadProducts();
     } catch (error) {
@@ -1344,102 +1631,187 @@ export default function AdminProductsPage() {
 
                 </div>
 
-                {/* IMAGE UPLOAD */}
+                {/* PRODUCT MEDIA UPLOAD */}
 
                 <div className="mt-6">
 
-                  <label className="text-[10px] uppercase tracking-[0.15em] text-black/40">
-                    Product Image
-                  </label>
+                  <div className="flex items-center justify-between">
+
+                    <label className="text-[10px] uppercase tracking-[0.15em] text-black/40">
+                      Product Media
+                    </label>
+
+                    {mediaItems.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={
+                          clearAllMedia
+                        }
+                        className="text-[10px] uppercase tracking-[0.12em] text-red-500 transition hover:text-red-700"
+                      >
+                        Remove All
+                      </button>
+                    )}
+
+                  </div>
 
                   <div className="mt-3 border border-black/10 bg-[#F8F7F4] p-5">
 
-                    {/* PREVIEW */}
+                    {/* MEDIA PREVIEWS */}
 
-                    {imagePreview && (
-                      <div className="mb-5 overflow-hidden bg-white">
+                    {mediaItems.length > 0 && (
+                      <div className="grid gap-4 sm:grid-cols-2">
 
-                        <img
-                          src={imagePreview}
-                          alt="Product preview"
-                          className="h-64 w-full object-contain"
-                        />
+                        {mediaItems.map(
+                          (
+                            item,
+                            index
+                          ) => {
+
+                            const preview =
+                              item.previewUrl ||
+                              item.url;
+
+                            return (
+                              <div
+                                key={`${item.id || item.url || "new"}-${index}`}
+                                className="relative overflow-hidden border border-black/10 bg-white"
+                              >
+
+                                <div className="flex h-56 items-center justify-center bg-[#F8F7F4]">
+
+                                  {item.type ===
+                                  "VIDEO" ? (
+                                    <video
+                                      src={
+                                        preview
+                                      }
+                                      controls
+                                      className="h-full w-full object-contain"
+                                    />
+                                  ) : (
+                                    <img
+                                      src={
+                                        preview
+                                      }
+                                      alt={`Product media ${index + 1}`}
+                                      className="h-full w-full object-contain"
+                                    />
+                                  )}
+
+                                </div>
+
+                                <div className="flex items-center justify-between border-t border-black/10 px-4 py-3">
+
+                                  <div>
+
+                                    <p className="text-[9px] uppercase tracking-[0.12em] text-black/40">
+                                      {item.type}
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-black/50">
+                                      Media{" "}
+                                      {index +
+                                        1}
+                                    </p>
+
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        index ===
+                                        0
+                                      }
+                                      onClick={() =>
+                                        moveMedia(
+                                          index,
+                                          "up"
+                                        )
+                                      }
+                                      className="border border-black/10 px-2 py-1 text-xs disabled:opacity-30"
+                                    >
+                                      ↑
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        index ===
+                                        mediaItems.length -
+                                          1
+                                      }
+                                      onClick={() =>
+                                        moveMedia(
+                                          index,
+                                          "down"
+                                        )
+                                      }
+                                      className="border border-black/10 px-2 py-1 text-xs disabled:opacity-30"
+                                    >
+                                      ↓
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeMedia(
+                                          index
+                                        )
+                                      }
+                                      className="border border-red-200 px-3 py-1 text-[9px] uppercase tracking-[0.1em] text-red-500"
+                                    >
+                                      Remove
+                                    </button>
+
+                                  </div>
+
+                                </div>
+
+                              </div>
+                            );
+                          }
+                        )}
 
                       </div>
                     )}
 
                     {/* UPLOAD AREA */}
 
-                    <label className="flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-black/10 bg-white px-6 py-10 text-center transition hover:border-black/30">
+                    <label className="mt-5 flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-black/10 bg-white px-6 py-10 text-center transition hover:border-black/30">
 
                       <span className="text-3xl">
                         ↑
                       </span>
 
                       <span className="mt-3 text-xs font-medium uppercase tracking-[0.15em]">
-                        {imageFile
-                          ? "Change Image"
-                          : imagePreview
-                          ? "Change Image"
-                          : "Choose Image"}
+                        Add Product Media
                       </span>
 
-                      <span className="mt-2 text-[10px] text-black/40">
-                        JPG, PNG, WEBP or AVIF · Max 5MB
+                      <span className="mt-2 text-[10px] leading-5 text-black/40">
+                        JPG, PNG, WEBP, AVIF, GIF, MP4, WebM or MOV
+                        <br />
+                        Images/GIF max 10MB · Video max 50MB
                       </span>
 
                       <input
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/avif"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp,image/avif,image/gif,video/mp4,video/webm,video/quicktime"
                         className="hidden"
                         onChange={
-                          handleImageChange
+                          handleMediaChange
                         }
                       />
 
                     </label>
 
-                    {/* FILE INFO */}
-
-                    {imageFile && (
-                      <div className="mt-4 flex items-center justify-between bg-white px-4 py-3">
-
-                        <div>
-
-                          <p className="text-xs font-medium">
-                            {
-                              imageFile.name
-                            }
-                          </p>
-
-                          <p className="mt-1 text-[10px] text-black/40">
-                            {(
-                              imageFile.size /
-                              1024
-                            ).toFixed(1)}{" "}
-                            KB
-                          </p>
-
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImageFile(
-                              null
-                            );
-
-                            setImagePreview(
-                              form.image ||
-                                ""
-                            );
-                          }}
-                          className="text-[10px] uppercase tracking-[0.12em] text-red-500"
-                        >
-                          Remove
-                        </button>
-
-                      </div>
+                    {mediaItems.length === 0 && (
+                      <p className="mt-4 text-center text-[10px] text-black/30">
+                        You can select multiple files at once.
+                      </p>
                     )}
 
                   </div>
@@ -1525,7 +1897,7 @@ export default function AdminProductsPage() {
                     className="bg-black px-7 py-4 text-xs font-medium uppercase tracking-[0.15em] text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {uploadingImage
-                      ? "Uploading Image..."
+                      ? "Uploading Media..."
                       : saving
                       ? "Saving..."
                       : editingProductId

@@ -30,7 +30,8 @@ export default function CartPage() {
   const total = subtotal + shipping;
 
   const totalItems = items.reduce(
-    (total, item) => total + item.quantity,
+    (total, item) =>
+      total + item.quantity,
     0
   );
 
@@ -38,7 +39,6 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <main className="min-h-screen bg-[#F8F7F4] px-6 py-20">
-
         <div className="mx-auto flex max-w-xl flex-col items-center text-center">
 
           <div className="mb-7 flex h-24 w-24 items-center justify-center rounded-full bg-white">
@@ -70,21 +70,18 @@ export default function CartPage() {
           </Link>
 
         </div>
-
       </main>
     );
   }
 
   return (
     <main className="min-h-screen bg-[#F8F7F4] px-5 py-12 md:px-10 md:py-20">
-
       <div className="mx-auto max-w-7xl">
 
         {/* HEADER */}
         <div className="mb-12 flex flex-col gap-6 border-b border-black/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
 
           <div>
-
             <p className="mb-3 text-xs uppercase tracking-[0.3em] text-black/40">
               RAQEI
             </p>
@@ -95,10 +92,11 @@ export default function CartPage() {
 
             <p className="mt-3 text-sm text-black/50">
               {totalItems}{" "}
-              {totalItems === 1 ? "item" : "items"} in
-              your cart
+              {totalItems === 1
+                ? "item"
+                : "items"}{" "}
+              in your cart
             </p>
-
           </div>
 
           <button
@@ -120,17 +118,19 @@ export default function CartPage() {
             {items.map((item) => {
 
               const itemTotal =
-                item.price * item.quantity;
+                item.price *
+                item.quantity;
 
               const maxStock =
                 item.stock ?? 999999;
 
               const canIncrease =
-                item.quantity < maxStock;
+                item.quantity <
+                maxStock;
 
               return (
                 <div
-                  key={`${item.id}-${item.size ?? "default"}`}
+                  key={item.id}
                   className="flex gap-4 border-b border-black/10 pb-8 sm:gap-6"
                 >
 
@@ -175,26 +175,18 @@ export default function CartPage() {
                           type="button"
                           onClick={() =>
                             removeFromCart(
-                              item.id,
-                              item.size
+                              item.id
                             )
                           }
                           className="flex h-9 w-9 shrink-0 items-center justify-center text-black/30 transition hover:text-red-500"
                           aria-label={`Remove ${item.name}`}
                         >
-                          <Trash2 size={17} />
+                          <Trash2
+                            size={17}
+                          />
                         </button>
 
                       </div>
-
-                      {item.size && (
-                        <p className="mt-2 text-xs text-black/50">
-                          Size:{" "}
-                          <span className="font-medium text-black">
-                            {item.size}
-                          </span>
-                        </p>
-                      )}
 
                       <p className="mt-3 text-sm">
                         EGP{" "}
@@ -222,14 +214,16 @@ export default function CartPage() {
                             onClick={() =>
                               updateQuantity(
                                 item.id,
-                                item.quantity - 1,
-                                item.size
+                                item.quantity -
+                                  1
                               )
                             }
                             className="flex h-10 w-10 items-center justify-center transition hover:bg-black hover:text-white"
                             aria-label="Decrease quantity"
                           >
-                            <Minus size={13} />
+                            <Minus
+                              size={13}
+                            />
                           </button>
 
                           <span className="flex h-10 w-10 items-center justify-center border-x border-black/15 text-sm">
@@ -238,12 +232,14 @@ export default function CartPage() {
 
                           <button
                             type="button"
-                            disabled={!canIncrease}
+                            disabled={
+                              !canIncrease
+                            }
                             onClick={() =>
                               updateQuantity(
                                 item.id,
-                                item.quantity + 1,
-                                item.size
+                                item.quantity +
+                                  1
                               )
                             }
                             className={`flex h-10 w-10 items-center justify-center transition ${
@@ -253,7 +249,9 @@ export default function CartPage() {
                             }`}
                             aria-label="Increase quantity"
                           >
-                            <Plus size={13} />
+                            <Plus
+                              size={13}
+                            />
                           </button>
 
                         </div>
@@ -279,7 +277,6 @@ export default function CartPage() {
                     </div>
 
                   </div>
-
                 </div>
               );
             })}
@@ -335,7 +332,10 @@ export default function CartPage() {
                 subtotal < 1000 && (
                   <p className="border-y border-black/10 py-4 text-xs leading-5 text-black/40">
                     Add EGP{" "}
-                    {(1000 - subtotal).toLocaleString(
+                    {(
+                      1000 -
+                      subtotal
+                    ).toLocaleString(
                       "en-US"
                     )}{" "}
                     more to get free shipping.
@@ -359,7 +359,6 @@ export default function CartPage() {
                 </div>
 
               </div>
-
             </div>
 
             {/* CHECKOUT */}
@@ -375,16 +374,15 @@ export default function CartPage() {
               href="/shop"
               className="mt-5 flex items-center justify-center gap-2 text-xs uppercase tracking-[0.15em] text-black/40 transition hover:text-black"
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft
+                size={14}
+              />
               Continue Shopping
             </Link>
 
           </aside>
-
         </div>
-
       </div>
-
     </main>
   );
 }

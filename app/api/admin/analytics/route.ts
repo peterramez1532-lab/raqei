@@ -1,5 +1,5 @@
-import { prisma } from "../../../lib/prisma";
-import { requireAdmin } from "../../../lib/admin-auth";
+import { prisma } from "../../../../lib/prisma";
+import { requireAdmin } from "../../../../lib/admin-auth";
 import { NextResponse } from "next/server";
 
 type Period = "7d" | "30d" | "12m";

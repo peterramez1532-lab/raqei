@@ -1,7 +1,6 @@
-import { prisma } from "../../../lib/prisma";
-import { requireAdmin } from "../../../lib/admin-auth";
+import { prisma } from "../../../../lib/prisma";
+import { requireAdmin } from "../../../../lib/admin-auth";
 import { NextResponse } from "next/server";
-
 export async function GET() {
   try {
     await requireAdmin();
@@ -12,6 +11,11 @@ export async function GET() {
       },
       include: {
         category: true,
+        media: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
       },
     });
 
@@ -58,29 +62,64 @@ export async function POST(request: Request) {
       );
     }
 
+    const media = Array.isArray(body.media)
+      ? body.media
+          .filter(
+            (item: any) =>
+              item &&
+              typeof item.url === "string" &&
+              ["IMAGE", "GIF", "VIDEO"].includes(item.type)
+          )
+          .map((item: any, index: number) => ({
+            url: item.url,
+            type: item.type,
+            sortOrder:
+              typeof item.sortOrder === "number"
+                ? item.sortOrder
+                : index,
+          }))
+      : [];
+
     const product = await prisma.product.create({
       data: {
         name: body.name,
         slug: body.slug,
         description: body.description || null,
+
         price: body.price,
+
         comparePrice:
           body.comparePrice !== undefined &&
           body.comparePrice !== null &&
           body.comparePrice !== ""
             ? body.comparePrice
             : null,
+
         sku: body.sku,
+
         images: Array.isArray(body.images)
           ? body.images
           : [],
+
         stock: Number(body.stock) || 0,
+
         isActive: body.isActive ?? true,
         isFeatured: body.isFeatured ?? false,
+
         categoryId: body.categoryId,
+
+        media: {
+          create: media,
+        },
       },
+
       include: {
         category: true,
+        media: {
+          orderBy: {
+            sortOrder: "asc",
+          },
+        },
       },
     });
 

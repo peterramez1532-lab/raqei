@@ -1,16 +1,15 @@
 "use client";
-import { useEffect } from "react";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, Currency, LockKeyhole } from "lucide-react";
+import { ArrowLeft, Check, LockKeyhole } from "lucide-react";
 
 import { useCart } from "@/components/Providers/CartProvider";
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
 
-  const [paymentMethod, setPaymentMethod] =
-    useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -24,17 +23,76 @@ export default function CheckoutPage() {
     notes: "",
   });
 
+    const [shippingRates, setShippingRates] = useState<
+    Record<string, { price: number; isActive: boolean }>
+  >({});
+
+  const [shippingLoading, setShippingLoading] = useState(true);
+
+  const [shippingError, setShippingError] = useState("");
+
+  useEffect(() => {
+    const loadShippingRates = async () => {
+      try {
+        setShippingLoading(true);
+        setShippingError("");
+
+        const response = await fetch("/api/shipping");
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to load shipping rates."
+          );
+        }
+
+        const rates: Record<
+          string,
+          { price: number; isActive: boolean }
+        > = {};
+
+        for (const rate of data) {
+          rates[rate.governorate] = {
+            price: Number(rate.price),
+            isActive: rate.isActive,
+          };
+        }
+
+        setShippingRates(rates);
+      } catch (error) {
+        console.error("LOAD CHECKOUT SHIPPING ERROR:", error);
+
+        setShippingError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load shipping rates."
+        );
+      } finally {
+        setShippingLoading(false);
+      }
+    };
+
+    loadShippingRates();
+  }, []);
+
+  const selectedShippingRate =
+    shippingRates[formData.governorate];
+
   const shipping =
     subtotal === 0
       ? 0
       : subtotal >= 1000
       ? 0
-      : 60;
+      : selectedShippingRate?.isActive
+      ? selectedShippingRate.price
+      : 0;
 
   const total = subtotal + shipping;
 
   useEffect(() => {
     const fbq = (window as any).fbq;
+
     const numItems = items.reduce(
       (count, item) => count + item.quantity,
       0
@@ -53,7 +111,9 @@ export default function CheckoutPage() {
         num_items: numItems,
       });
     } else {
-      console.log("fbq is not defined. Meta Pixel may not be loaded yet.");
+      console.log(
+        "fbq is not defined. Meta Pixel may not be loaded yet."
+      );
     }
   }, [total, items]);
 
@@ -76,6 +136,7 @@ export default function CheckoutPage() {
     } else {
       console.log("GA4 GTAG NOT FOUND");
     }
+
     const ttq = (window as any).ttq;
 
     if (ttq && typeof ttq.track === "function") {
@@ -135,7 +196,6 @@ export default function CheckoutPage() {
           items: items.map((item) => ({
             id: item.id,
             quantity: item.quantity,
-            size: item.size,
           })),
         }),
       });
@@ -156,7 +216,6 @@ export default function CheckoutPage() {
         `/order-confirmation?order=${encodeURIComponent(
           data.orderNumber
         )}`;
-
     } catch (error) {
       console.error("PLACE ORDER ERROR:", error);
 
@@ -169,6 +228,7 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
+
   if (items.length === 0) {
     return (
       <main className="min-h-screen bg-[#F8F7F4] px-6 py-20">
@@ -178,8 +238,7 @@ export default function CheckoutPage() {
           </h1>
 
           <p className="mt-4 text-gray-500">
-            Add some products before proceeding
-            to checkout.
+            Add some products before proceeding to checkout.
           </p>
 
           <Link
@@ -227,8 +286,8 @@ export default function CheckoutPage() {
                   </h2>
 
                   <p className="mt-2 text-sm text-gray-500">
-                    We'll use this information to contact
-                    you about your order.
+                    We'll use this information to contact you
+                    about your order.
                   </p>
                 </div>
 
@@ -346,64 +405,53 @@ export default function CheckoutPage() {
                       value={formData.governorate}
                       onChange={handleChange}
                       required
-                      className="w-full border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-black"
+                      disabled={shippingLoading}
+                      className="w-full border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-black disabled:cursor-not-allowed disabled:bg-gray-100"
                     >
                       <option value="">
-                        Select Governorate
+                        {shippingLoading
+                          ? "Loading Governorates..."
+                          : "Select Governorate"}
                       </option>
 
-                      <option value="cairo">
-                        Cairo
-                      </option>
-
-                      <option value="giza">
-                        Giza
-                      </option>
-
-                      <option value="alexandria">
-                        Alexandria
-                      </option>
-
-                      <option value="qalyubia">
-                        Qalyubia
-                      </option>
-
-                      <option value="dakahlia">
-                        Dakahlia
-                      </option>
-
-                      <option value="sharqia">
-                        Sharqia
-                      </option>
-
-                      <option value="gharbia">
-                        Gharbia
-                      </option>
-
-                      <option value="monufia">
-                        Monufia
-                      </option>
-
-                      <option value="beheira">
-                        Beheira
-                      </option>
-
-                      <option value="port-said">
-                        Port Said
-                      </option>
-
-                      <option value="suez">
-                        Suez
-                      </option>
-
-                      <option value="ismailia">
-                        Ismailia
-                      </option>
-
-                      <option value="other">
-                        Other
-                      </option>
+                      {Object.entries(shippingRates).map(
+                        ([governorate, rate]) => (
+                          <option
+                            key={governorate}
+                            value={governorate}
+                          >
+                            {governorate}
+                            {" — "}
+                            {rate.price.toLocaleString()} EGP
+                          </option>
+                        )
+                      )}
                     </select>
+
+                    {shippingError && (
+                      <p className="mt-2 text-xs text-red-500">
+                        {shippingError}
+                      </p>
+                    )}
+
+                    {formData.governorate &&
+                      selectedShippingRate &&
+                      subtotal < 1000 && (
+                        <p className="mt-2 text-xs text-black/50">
+                          Shipping to {formData.governorate}:{" "}
+                          <span className="font-medium text-black">
+                            EGP {selectedShippingRate.price.toLocaleString()}
+                          </span>
+                        </p>
+                      )}
+
+                    {formData.governorate &&
+                      selectedShippingRate &&
+                      subtotal >= 1000 && (
+                        <p className="mt-2 text-xs text-green-600">
+                          Free shipping on orders over EGP 1,000.
+                        </p>
+                      )}
                   </div>
 
                   {/* City */}
@@ -512,9 +560,7 @@ export default function CheckoutPage() {
                   {/* COD */}
                   <button
                     type="button"
-                    onClick={() =>
-                      setPaymentMethod("cod")
-                    }
+                    onClick={() => setPaymentMethod("cod")}
                     className={`flex w-full items-center justify-between border p-5 text-left transition ${
                       paymentMethod === "cod"
                         ? "border-black"
@@ -553,9 +599,7 @@ export default function CheckoutPage() {
                   {/* Online */}
                   <button
                     type="button"
-                    onClick={() =>
-                      setPaymentMethod("online")
-                    }
+                    onClick={() => setPaymentMethod("online")}
                     className={`flex w-full items-center justify-between border p-5 text-left transition ${
                       paymentMethod === "online"
                         ? "border-black"
@@ -604,7 +648,7 @@ export default function CheckoutPage() {
               <div className="mt-7 space-y-5">
                 {items.map((item) => (
                   <div
-                    key={`${item.id}-${item.size ?? "default"}`}
+                    key={item.id}
                     className="flex gap-4"
                   >
                     <div className="relative h-20 w-16 shrink-0 bg-[#E8E5DF]">
@@ -630,17 +674,10 @@ export default function CheckoutPage() {
                         {item.name}
                       </p>
 
-                      {item.size && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Size: {item.size}
-                        </p>
-                      )}
-
                       <p className="mt-2 text-sm">
                         EGP{" "}
                         {(
-                          item.price *
-                          item.quantity
+                          item.price * item.quantity
                         ).toLocaleString()}
                       </p>
                     </div>
@@ -666,9 +703,13 @@ export default function CheckoutPage() {
                   </span>
 
                   <span>
-                    {shipping === 0
+                    {!formData.governorate
+                      ? "Select Governorate"
+                      : subtotal >= 1000
                       ? "FREE"
-                      : `EGP ${shipping}`}
+                      : selectedShippingRate
+                      ? `EGP ${shipping.toLocaleString()}`
+                      : "Unavailable"}
                   </span>
                 </div>
 
@@ -694,18 +735,29 @@ export default function CheckoutPage() {
                 </p>
               </div>
 
+              {/* Error */}
+              {submitError && (
+                <div className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {submitError}
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
-                disabled={isSubmitting || items.length === 0}
+                disabled={
+                  isSubmitting || items.length === 0
+                }
                 className="mt-8 flex w-full items-center justify-center bg-black py-5 text-xs font-medium uppercase tracking-[0.2em] text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? "Processing Order..." : "Place Order"}
+                {isSubmitting
+                  ? "Processing Order..."
+                  : "Place Order"}
               </button>
 
               <p className="mt-4 text-center text-xs leading-5 text-gray-400">
-                By placing your order, you agree to
-                our terms and conditions.
+                By placing your order, you agree to our
+                terms and conditions.
               </p>
             </aside>
           </div>

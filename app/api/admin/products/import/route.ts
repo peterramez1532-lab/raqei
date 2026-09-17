@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
-import { prisma } from "../../../../lib/prisma";
-import { requireAdmin } from "../../../../lib/admin-auth";
+import { prisma } from "../../../../../lib/prisma";
+import { requireAdmin } from "../../../../../lib/admin-auth";
 import { NextResponse } from "next/server";
 
 function parseBoolean(value: unknown, defaultValue = true) {

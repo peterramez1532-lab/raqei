@@ -10,48 +10,25 @@ import Navbar from "@/components/Navbar";
 import { CartProvider } from "@/components/Providers/CartProvider";
 
 
-export const metadata: Metadata = {
-  title: {
-    default: "RAQEI | Modern. Simple. Yours.",
-    template: "%s | RAQEI",
-  },
+import { getSettings } from "@/lib/settings";
+import Chatbot from "@/components/Chatbot";
 
-  description:
-    "Discover RAQEI — modern fashion designed with simplicity, confidence, and style.",
+export async function generateMetadata(){
 
-  keywords: [
-    "RAQEI",
-    "RAQEI Egypt",
-    "fashion",
-    "streetwear",
-    "clothing",
-    "Egyptian fashion",
-  ],
+const settings = await getSettings();
 
-  authors: [{ name: "RAQEI" }],
-  creator: "RAQEI",
-  publisher: "RAQEI",
 
-  openGraph: {
-    title: "RAQEI | Modern. Simple. Yours.",
-    description:
-      "Discover RAQEI — modern fashion designed with simplicity, confidence, and style.",
-    type: "website",
-    siteName: "RAQEI",
-  },
+return {
 
-  twitter: {
-    card: "summary_large_image",
-    title: "RAQEI | Modern. Simple. Yours.",
-    description:
-      "Discover RAQEI — modern fashion designed with simplicity, confidence, and style.",
-  },
+title:
+settings.seoTitle || "RAQEI",
 
-  robots: {
-    index: true,
-    follow: true,
-  },
+description:
+settings.metaDescription || "Modern. Simple. Yours.",
+
 };
+
+}
 
 
 export default function RootLayout({
@@ -359,6 +336,7 @@ export default function RootLayout({
           {children}
 
         </CartProvider>
+        <Chatbot />
 
       </body>
 

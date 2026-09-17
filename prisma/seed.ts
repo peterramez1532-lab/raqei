@@ -1,7 +1,7 @@
 
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { prisma } from "../app/lib/prisma";
+import { prisma } from "../lib/prisma";
 
 async function main() {
   const email = process.env.ADMIN_EMAIL;

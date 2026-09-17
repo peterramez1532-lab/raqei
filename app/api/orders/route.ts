@@ -1,4 +1,4 @@
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -117,7 +117,6 @@ export async function POST(request: Request) {
       {
         id: string;
         quantity: number;
-        size: string | null;
       }
     >();
 
@@ -152,12 +151,6 @@ export async function POST(request: Request) {
         );
       }
 
-      const size =
-        typeof item.size === "string" &&
-        item.size.trim()
-          ? item.size.trim()
-          : null;
-
       const existing = normalizedItems.get(item.id);
 
       if (existing) {
@@ -176,7 +169,6 @@ export async function POST(request: Request) {
         normalizedItems.set(item.id, {
           id: item.id,
           quantity,
-          size,
         });
       }
     }
@@ -261,8 +253,43 @@ export async function POST(request: Request) {
     // Shipping
     // =========================
 
+    const governorate = customer.governorate.trim();
+
+    const shippingRate =
+      await prisma.shippingRate.findUnique({
+        where: {
+          governorate,
+        },
+      });
+
+    // Orders under EGP 1,000 need an active
+    // shipping rate for the selected governorate.
+    if (subtotal < 1000) {
+      if (!shippingRate) {
+        return NextResponse.json(
+          {
+            error:
+              "Shipping is not available for the selected governorate.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!shippingRate.isActive) {
+        return NextResponse.json(
+          {
+            error:
+              "Shipping is currently unavailable for the selected governorate.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const shipping =
-      subtotal >= 1000 ? 0 : 60;
+      subtotal >= 1000
+        ? 0
+        : Number(shippingRate?.price ?? 0);
 
     const total =
       subtotal + shipping;
@@ -340,8 +367,7 @@ export async function POST(request: Request) {
                 lastName:
                   customer.lastName.trim(),
 
-                governorate:
-                  customer.governorate.trim(),
+                governorate,
 
                 city:
                   customer.city.trim(),
@@ -384,15 +410,12 @@ export async function POST(request: Request) {
                       }
 
                       return {
-                        quantity:
-                          item.quantity,
+                        quantity: item.quantity,
 
                         // IMPORTANT:
                         // Price comes from DB,
                         // never from frontend.
                         price: product.price,
-
-                        size: item.size,
 
                         productId: product.id,
                       };
@@ -413,6 +436,30 @@ export async function POST(request: Request) {
           return createdOrder;
         }
       );
+
+    // =========================
+    // Create admin notification
+    // =========================
+
+    try {
+      await (prisma as any).notification.create({
+        data: {
+          title: "New Order Received",
+          message: `New order ${order.orderNumber} from ${order.firstName} ${order.lastName} — EGP ${Number(order.total).toLocaleString("en-EG")}.`,
+          type: "ORDER",
+          isRead: false,
+          userId: null,
+          orderId: order.id,
+        },
+      });
+    } catch (notificationError) {
+      // Notification failure must NOT cancel
+      // an already successful order.
+      console.error(
+        "CREATE ORDER NOTIFICATION ERROR:",
+        notificationError
+      );
+    }
 
     // =========================
     // Success response
@@ -583,9 +630,6 @@ export async function GET(request: Request) {
 
             price:
               item.price,
-
-            size:
-              item.size,
 
             product: {
               id:

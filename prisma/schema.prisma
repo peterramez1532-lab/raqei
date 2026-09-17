@@ -15,104 +15,138 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders    Order[]
-  addresses Address[]
-  reviews   Review[]
+  orders        Order[]
+  addresses     Address[]
+  reviews       Review[]
+  notifications Notification[]
 }
 
 model Category {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String    @unique
+  slug        String   @unique
   description String?
   image       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  products    Product[]
+  products Product[]
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?
+  price        Decimal  @db.Decimal(10, 2)
   comparePrice Decimal? @db.Decimal(10, 2)
-  sku         String    @unique
-  images      String[]
-  stock       Int       @default(0)
-  isActive    Boolean   @default(true)
-  isFeatured  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  sku          String   @unique
+  images       String[]
+  stock        Int      @default(0)
+  isActive     Boolean  @default(true)
+  isFeatured   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  orderItems  OrderItem[]
-  reviews     Review[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  media      ProductMedia[]
+  leads      ProductLead[]
+}
+
+model ProductMedia {
+  id        String    @id @default(cuid())
+  url       String
+  type      MediaType
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model ProductLead {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  email     String?
+  notes     String?
+  status    LeadStatus @default(NEW)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Address {
-  id           String   @id @default(cuid())
-  firstName    String
-  lastName     String
-  phone        String
-  governorate  String
-  city         String
-  address      String
-  apartment    String?
-  floor        String?
-  isDefault    Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  phone       String
+  governorate String
+  city        String
+  address     String
+  apartment   String?
+  floor       String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique
-  status          OrderStatus   @default(PENDING)
-  paymentMethod   PaymentMethod
-  paymentStatus   PaymentStatus @default(PENDING)
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
 
-  customerEmail   String
-  customerPhone   String
-  firstName       String
-  lastName        String
-  governorate     String
-  city            String
-  address         String
-  apartment       String?
-  floor           String?
-  notes           String?
+  customerEmail String
+  customerPhone String
+  firstName     String
+  lastName      String
+  governorate   String
+  city          String
+  address       String
+  apartment     String?
+  floor         String?
+  notes         String?
 
-  subtotal        Decimal       @db.Decimal(10, 2)
-  shipping        Decimal       @db.Decimal(10, 2)
-  total           Decimal       @db.Decimal(10, 2)
+  subtotal Decimal @db.Decimal(10, 2)
+  shipping Decimal @db.Decimal(10, 2)
+  total    Decimal @db.Decimal(10, 2)
 
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  userId          String?
-  user            User?         @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
-  items           OrderItem[]
+  items         OrderItem[]
+  notifications Notification[]
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  quantity    Int
-  price       Decimal  @db.Decimal(10, 2)
-  size        String?
+  id       String  @id @default(cuid())
+  quantity Int
+  price    Decimal @db.Decimal(10, 2)
 
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model Review {
@@ -121,11 +155,55 @@ model Review {
   comment   String?
   createdAt DateTime @default(now())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ShippingRate {
+  id          String   @id @default(cuid())
+  governorate String   @unique
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminLoginAttempt {
+  id             String    @id @default(cuid())
+  identifier     String    @unique
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  updatedAt      DateTime  @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(ORDER)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderId String?
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([orderId])
+  @@index([createdAt])
 }
 
 enum Role {
@@ -151,4 +229,23 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum MediaType {
+  IMAGE
+  GIF
+  VIDEO
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  CLOSED  
+}
+
+enum NotificationType {
+  ORDER
+  ORDER_STATUS
+  SYSTEM
 }
