@@ -124,7 +124,7 @@ export default function ProductPage() {
         setLoading(true);
 
         const res = await fetch(
-          "/api/products",
+          `/api/products-public/${encodeURIComponent(slug)}`,
           {
             cache: "no-store",
           }
@@ -132,29 +132,17 @@ export default function ProductPage() {
 
         if (!res.ok) {
           throw new Error(
-            "Failed to fetch products"
+            `Failed to fetch product: ${res.status}`
           );
         }
 
-        const products: Product[] =
+        const foundProduct: Product =
           await res.json();
 
-        const foundProduct =
-          products.find(
-            (item) => item.slug === slug
-          );
-
-        setProduct(
-          foundProduct || null
-        );
-
+        setProduct(foundProduct);
         setSelectedImage(0);
       } catch (error) {
-        console.error(
-          "GET PRODUCT ERROR:",
-          error
-        );
-
+        console.error("GET PRODUCT ERROR:", error);
         setProduct(null);
       } finally {
         setLoading(false);
