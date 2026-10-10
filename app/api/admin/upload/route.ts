@@ -1,11 +1,13 @@
+
 import { requireAdmin } from "../../../../lib/admin-auth";
 import { NextResponse } from "next/server";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 import crypto from "crypto";
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+export const runtime = "nodejs";
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
 
 const extensionMap: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -13,7 +15,6 @@ const extensionMap: Record<string, string> = {
   "image/webp": "webp",
   "image/avif": "avif",
   "image/gif": "gif",
-
   "video/mp4": "mp4",
   "video/webm": "webm",
   "video/quicktime": "mov",
@@ -35,14 +36,17 @@ const videoTypes = [
 
 export async function POST(request: Request) {
   try {
+    // Make sure the current user is an admin.
     await requireAdmin();
 
+    // Read the uploaded file from the request.
     const formData = await request.formData();
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
       return NextResponse.json(
         {
+          success: false,
           error: "Please select a file.",
         },
         { status: 400 }
@@ -50,13 +54,14 @@ export async function POST(request: Request) {
     }
 
     const fileType = file.type;
-
     const isImage = imageTypes.includes(fileType);
     const isVideo = videoTypes.includes(fileType);
 
+    // Validate the file type.
     if (!isImage && !isVideo) {
       return NextResponse.json(
         {
+          success: false,
           error:
             "Supported formats: JPG, PNG, WEBP, AVIF, GIF, MP4, WEBM and MOV.",
         },
@@ -64,16 +69,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate the file size.
     const maxSize = isVideo
       ? MAX_VIDEO_SIZE
       : MAX_IMAGE_SIZE;
 
-    if (file.size > maxSize) {
+    if (file.size === 0 || file.size > maxSize) {
       return NextResponse.json(
         {
+          success: false,
           error: isVideo
-            ? "Video size must be less than 50MB."
-            : "Image size must be less than 10MB.",
+            ? "Video must be larger than 0 and no more than 50MB."
+            : "Image must be larger than 0 and no more than 10MB.",
         },
         { status: 400 }
       );
@@ -84,41 +91,33 @@ export async function POST(request: Request) {
     if (!extension) {
       return NextResponse.json(
         {
-          error: "Unsupported file type.",
+          success: false,
+          error: "Unsupported file extension.",
         },
         { status: 400 }
       );
     }
 
-    const fileName = `${crypto.randomUUID()}.${extension}`;
+    // Generate a unique storage path for every upload.
+    const fileName = `products/${crypto.randomUUID()}.${extension}`;
 
-    const uploadDirectory = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "products"
-    );
-
-    await mkdir(uploadDirectory, {
-      recursive: true,
+    // Upload to persistent Vercel Blob storage.
+    // BLOB_READ_WRITE_TOKEN must be configured in Vercel.
+    const blob = await put(fileName, file, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: fileType,
     });
 
-    const filePath = path.join(
-      uploadDirectory,
-      fileName
-    );
-
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    await writeFile(filePath, buffer);
-
-    const url = `/uploads/products/${fileName}`;
-
+    // Return the public URL expected by the admin UI.
     return NextResponse.json({
       success: true,
-      url,
-      type: isVideo ? "VIDEO" : fileType === "image/gif" ? "GIF" : "IMAGE",
+      url: blob.url,
+      type: isVideo
+        ? "VIDEO"
+        : fileType === "image/gif"
+          ? "GIF"
+          : "IMAGE",
     });
   } catch (error) {
     console.error("FILE UPLOAD ERROR:", error);
@@ -129,6 +128,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
+          success: false,
           error: "Unauthorized",
         },
         { status: 401 }
@@ -137,7 +137,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: "Failed to upload file.",
+        success: false,
+        error: "Failed to upload file. Check server logs and Blob configuration.",
       },
       { status: 500 }
     );
